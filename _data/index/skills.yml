@@ -2,5 +2,5 @@
 
 label: Ability
 id : cs
-aspects: AL, Docker, Azure Functions, API,C#, Python, Climbing, Sleeping
-percentage: 90, 60, 65, 30, 60, 10, 50, 10
+aspects: AL, Docker, Azure Functions, API,C#, Python, Linux, Climbing, Sleeping
+percentage: 90, 60, 65, 30, 60, 20, 60, 50, 30

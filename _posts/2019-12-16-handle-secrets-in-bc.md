@@ -18,7 +18,7 @@ begin
 end;
 ```
 
-I immediately had this feeling telling me this is wrong on so many levels. At least the function is local function and you you do not blare it to every app installed with you. Unfortunately I had do learn later that many NAV/BC developers do not know what the problem is with situation this.
+I immediately had this feeling telling me this is wrong on so many levels. At least the function is local function and you do not blare it to every app installed with you. Unfortunately I had to learn later that many NAV/BC developers do not know what the problem is with situation this.
 
 ## **The TL;DR**
 

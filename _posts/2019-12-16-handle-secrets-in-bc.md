@@ -9,7 +9,7 @@ tags: [Business Central,Secrets, Isolated Storage]
 icon: fa-key
 ---
 
-On my last visit at the NAV TechDays I had a chat with Wael AbuSeada (Security Expert at Microsoft) and Gert Robyns (Principal Software Engineer at Microsoft) on handling secrets in Business Central. I tried to save an OAuth key in the Isolated Storage and wanted their opinion on that. A few days later back home I found a piece of code in repo, similar to the one below. It was used for authenticating against an Azure Function. After a bit of digging I had to learn there was even a mail send around with a key that should be changed. I immediately felt tearing my hair out. 
+On my last visit at the NAV TechDays I had a chat with Wael AbuSeada (Security Expert at Microsoft) and Gert Robyns (Principal Software Engineer at Microsoft) on handling secrets in Business Central. I tried to save an OAuth key in the Isolated Storage and wanted their opinion on that. A few days later back home I found a piece of code in repo, similar to the one below. It was used for authenticating against an Azure Function. After a bit of digging I had to learn there was even a mail send around with a key that should be changed. I immediately felt like tearing my hair out. 
 
 ```pascal
 local procedure GetKey(): Text

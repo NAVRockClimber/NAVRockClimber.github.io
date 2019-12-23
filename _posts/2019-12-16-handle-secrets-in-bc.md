@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Handling secrets in business central"
-date:   2019-12-16
+date:   2019-12-23
 desc: "Handling secrets in business central"
 keywords: "Business Central,Secrets, Isolated Storage"
 categories: [Secrets]
@@ -9,7 +9,7 @@ tags: [Business Central,Secrets, Isolated Storage]
 icon: fa-key
 ---
 
-On my last visit at the NAV TechDays I had a nice chat with Wael AbuSeada the security expert from Microsoft and Gert Robyns (Principal Software Engineer at Microsoft) on handling secrets in Business Central. At almost the same time I got a mail forwarded that an access key should be changed. After digging a bit into the mail I found code similar to the snippet below.
+On my last visit at the NAV TechDays I had a chat with Wael AbuSeada (Security Expert at Microsoft) and Gert Robyns (Principal Software Engineer at Microsoft) on handling secrets in Business Central. I tried to save an OAuth key in the Isolated Storage and wanted their opinion on that. A few days later back home I found a piece of code in repo, similar to the one below. It was used for authenticating against an Azure Function. After a bit of digging I had to learn there was even a mail send around with a key that should be changed. I immediately felt tearing my hair out. 
 
 ```pascal
 local procedure GetKey(): Text
@@ -18,25 +18,27 @@ begin
 end;
 ```
 
-I immediately had this feeling telling me this is wrong on so many levels. At least the function is local function and you do not blare it to every app installed with you. Unfortunately I had to learn later that many NAV/BC developers do not know what the problem is with situation this.
+A few chats later I was sitting totally frustrated in my office. I spoke to the developers of this piece of code, a few other developers and unfortunately I had to learn later that many NAV/BC developers do not know what the problem is with the code above. So, here are my 2 cents on why this is wrong and how you can make better. 
 
 ## **The TL;DR**
 
-Secrets are metadata and don't belong into code and you should not spread them via mail. Secrets should be changeable, stored securely and never come into the near of code or a repository. One way of doing this I show in my [example repository](https://github.com/NAVRockClimber/AlSecrectsExample).
+Secrets are metadata and don't belong into code and you should not spread them via mail. Secrets should be changeable, stored securely and never come into the near of code or a repository. One way of doing this I show in my [example repository](https://github.com/NAVRockClimber/AlSecrectsExample){:target="_blank"}.
 
 ## **What's the problem?**
 
-With the situation above we have several Problems.
+Let me explain first why this is a problem and what's the situation with the code above. Actually there are several problems.
 
-1. Secrets in code are a huge potential security issue. Cardinal errors like this cause situation where we read in the press that thousands of personal records have been leaked. We should never be in the need to inform developers about a changed access key. An access key is configuration data and should as sure as hell not be distributed via e-mail. Our code and onboarding process should allow to change a key without the need of changing one line of code. 
+1. Secrets in code are a huge potential security issue. Cardinal errors like this cause situations where we read in the press that thousands of personal records have been leaked. We should never be in the need to inform developers about a changed access key. 
 
-2. If your key gets compromised you have to roll out an update. And, rolling out an update can take quite some time. Time you might not have in terms of revoking your compromised key. You should simply be able to revoke the key, generate a new one and inform your customer to visit your website and grab a new key. No need to say the website should be protected by some kind of login.
+2. An access key is configuration data and should as sure as hell not be distributed via e-mail. We should be able to change a key without informing everybody. In an ideal world nobody in development should even recognize that the key was changed. Our code and onboarding process should allow to change a key without the need of changing one line of code. 
 
-3. The fact of one key is being send around shows the next problem. This means everybody is using the same key. Meaning revoking the key and creating a new key will affect all consumers of you azure function. In a case of a compromised key you got to contact and inform all your customers. If you even forced to revoke a key for a vital function you might stop all your consumers from being able to work. In the worst case you might face financial claims due to damage compensation.
+3. If your key gets compromised you have to roll out an update. And, rolling out an update can take quite some time. Time you might not have in terms of revoking your compromised key. You should simply be able to revoke the key, generate a new one and inform your customer to visit your website and grab a new key. No need to say the website should be protected by some kind of login.
 
-4. Why is this piece of code not in a central library that sleeps in a repository? With a repository we simply make a pull request for submitting a change. This change than gets distributed via a pipeline and in the best case your developers do not even recognize that something changed. It almost seems like the developers copied the same piece of code. Which is bad. Really bad. Ok, this is probably where we partially have to blame Microsoft. In a matter of fact it is simply not documented that you can publish something Microsoft calls a library app. Library apps are not shown in Microsoft's app source and you ship them with you "real" App. Unfortunately this comes with a caveat. If you got multiple apps referencing the library app all your apps have to reference the same version due to you cannot install one app twice. 
+4. The fact of one key is being send around shows the next problem. This means everybody is using the same key. Meaning revoking the key and creating a new key will affect all consumers of you azure function. In a case of a compromised key you got to contact and inform all your customers. If you even forced to revoke a key for a vital function you might stop all your customers from being able to work. In the worst case you might face financial claims due to damage compensation.
 
-In the Business Central world everybody tells us nowadays we have to use Azure Functions now. But rarely we hear people speaking about security. We have to learn that we might not play in our on premise backyard anymore. We cannot rely anymore on an admin isolating us from the rest of the world. We communicate with services in the big world wide web. This is an area where we need to have an eye on security. At least have it in the back of our minds. 
+5. The fact everybody consuming this Azure Function has been informed via mail raises the question if there is no central repo or library. In a repository we simply make a pull request for submitting a change. With the next pull everybody should have the update. In a library a build pipeline will distribute the change. Informing people via mail of changes is really bad. Ok, this is probably where we partially have to blame Microsoft. In a matter of fact it is simply not documented that you can publish something Microsoft calls a Dependency App. Library apps or Dependency Apps are not shown in Microsoft's app source and you ship them with you "real" App. 
+
+With the new modern development and Microsoft pushing towards the cloud everybody tells us nowadays we have to use Azure Functions. But rarely we hear people speaking about security. We have to learn that we might not play in our on premise backyard anymore. We cannot rely anymore on an admin isolating us from the rest of the world. We communicate with services in the big world wide web. This is an area where we need to have an eye on security. At least have it in the back of our minds. 
 
 ## **What's a secret anyway**
 
@@ -44,11 +46,11 @@ A secret can be a password, a server configuration, token, certificate and more.
 
 ## **Come on dude, get to the point**
 
-In Business Central we got the **[Isolated storage](https://docs.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/devenv-isolated-storage)** and this is where secrets belong. Don't get me wrong. It is neither the only way to store a secret nor is it rock solid secure. We should handle secrets like something that can always be comprised by accident and we should have a plan b for situations like that.
+In Business Central we got the [Isolated Storage](https://docs.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/devenv-isolated-storage){:target="_blank"} and this is where secrets belong. Don't get me wrong. It is neither the only way to store a secret nor is it rock solid secure. We should handle secrets like something that can always be comprised by accident and we should have a plan b for situations like that. Meaning or code should allow to change the secret.
 
-### How to store a secret
+### **How to store a secret**
 
-In an ideal word we could throw the secret into the [isolated storage](https://docs.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/devenv-isolated-storage) and it would store it encrypted for us. Well, there is good news and bad news. The bad news first. Unfortunately Microsoft did in my opinion not a good job here. We can only store **encrypted** secrets whose length do not exceed 215 characters. In the real world like when you are dealing with OAuth tokens we exceed this character limit. The good news is access tokens for Azure Functions are shorter. Also we can work around this limitation with Microsoft's Encryption API. As I will show in the following snippet.
+In an ideal word we could throw the secret into the a function and it would store it encrypted for us. Wait, we got something like this. It is called [Isolated Storage](https://docs.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/devenv-isolated-storage){:target="_blank"}. But well, there is good news and bad news. The bad news first. Unfortunately Microsoft did in my opinion not a good job here. We can only store **encrypted** secrets whose length do not exceed 215 characters. In the real world like when you are dealing with OAuth and tokens we might exceed this character limit. The good news is access tokens for Azure Functions are shorter. Also we can work around this limitation with Microsoft's Encryption API. As shown in the following snippet.
 
 ```pascal
 [NonDebuggable]
@@ -65,11 +67,11 @@ begin
 end;
 ```
 
-For storing the secret encrypted we first check if the encryption is [enabled](https://docs.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/methods-auto/system/system-encryptionenabled-method) at all. After this we just throw it in the [encryption](https://docs.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/methods-auto/system/system-encrypt-method) module and store our secret. Nice, fine and secure. But, pay attention here and set the NonDebuggable attribute. We do not want to expose our secret accidentally in the debugger.
+For storing the secret encrypted we first check if the encryption is [enabled](https://docs.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/methods-auto/system/system-encryptionenabled-method){:target="_blank"} at all. After this we just throw it in the [encryption](https://docs.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/methods-auto/system/system-encrypt-method){:target="_blank"} module and store our secret. Nice, fine and secure. But, pay attention here and set the NonDebuggable attribute. We do not want to expose our secret accidentally in the debugger.
 
-### Retrieve a secret
+### **Retrieve a secret**
 
-For retrieving a secret we just need to reverse the procedure. We first fetch the encrypted secret from the **[isolated storage](https://docs.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/devenv-isolated-storage)**, **[decrypt](https://docs.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/methods-auto/system/system-decrypt-method)** it and return the value. You find the full on my github repo [here](https://github.com/NAVRockClimber/AlSecrectsExample).
+For retrieving a secret we just need to reverse the process. We first fetch the encrypted secret from the [Isolated Storage](https://docs.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/devenv-isolated-storage){:target="_blank"}, [decrypt](https://docs.microsoft.com/en-us/dynamics365/business-central/dev-itpro/developer/methods-auto/system/system-decrypt-method){:target="_blank"} it and return the value. You find the full example in my github [repo](https://github.com/NAVRockClimber/AlSecrectsExample){:target="_blank"}.
 
 ```pascal
 [NonDebuggable]
@@ -89,6 +91,6 @@ begin
 end;
 ```
 
-We can now write and retrieve secrets. For implementing the full CRUD functionality only the delete method is missing. But due to you are still with me and as long as you understood the examples above I assume you are capable of writing them on your own or just copy them from my [repo](https://github.com/NAVRockClimber/AlSecrectsExample). 
+We can now write and retrieve secrets. For implementing the full CRUD functionality only the delete method is missing. But due to you are still with me and as long as you understood the examples above I assume you are capable of writing them on your own or just copy them from my [repo](https://github.com/NAVRockClimber/AlSecrectsExample){:target="_blank"}. 
 
-If you now decorate all this with a pipeline and come up with a onboarding and update process for your customers or consumers of your Azure Function you should be safe.
+If you put all this in a central library, decorate this with a pipeline and come up with an proper onboarding and update process for your customers you should have a quite solid solution to dealing, distributing and updating your secrets.

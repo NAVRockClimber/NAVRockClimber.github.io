@@ -9,7 +9,7 @@ tags: [Business Central,Secrets]
 icon: fa-key
 ---
 
-My last post on [Handling Secrets](2019-12-16-handle-secrets-in-bc.md) started quite a few discussions. Which is good. Very good. We need to start thinking about security. Like I already said we are not playing in our on-premise backyard anymore where an network administrator will keep us save and secure. We entered a world where we working with connected systems. For now the number is probably quite small and handlable. If you ask my for my opinion this number will rise. We are working towards a mesh of smaller and bigger distributed services. The majority of them will be publicly in the internet and secured the one way or the other. If you try to categorize these discussions there have been clearly three main subjects of discussion. First how we can initialize the secrets. This is the subject of this blog post. The other subjects have been the mechanisms for authenticating and how to manage service like Azure Function. I probably will do posts about them in the future as well. But for now let us stick with initializing the secrets.
+My last post on [Handling Secrets](2019-12-16-handle-secrets-in-bc.md) started quite a few discussions. Which is good. Very good. We need to start thinking about security. Like I already said we are not playing in our on-premise backyard anymore where an network administrator will keep us save and secure. We entered a world where we working with connected systems. For now the number is probably quite small and handleable. If you ask my for my opinion this number will rise. We are working towards a mesh of smaller and bigger distributed services. The majority of them will be publicly in the internet and secured the one way or the other. If you try to categorize these discussions there have been clearly three main subjects of discussion. First how we can initialize the secrets. This is the subject of this blog post. The other subjects have been the mechanisms for authenticating and how to manage service like Azure Function. I probably will do posts about them in the future as well. But for now let us stick with initializing the secrets.
 
 ## TL;DR
 
@@ -32,11 +32,11 @@ Well, you hopefully agree that these 5 bullet points are mostly non-negotiable r
 
 ## The dark path
 
-Unfortunatly Microsoft does not provide us with the possibility of a webhook, yet. So let us be soft on the last point of our list. My first idea was to put it in the installer codeunit. But interestingly this does not work. I suspect Microsoft has not access to the the customer tenant at this point. If somebody knows the real answer shoot me a message on twitter. The second best option for initilizing the secret is somewhere in the setup.
+Unfortunately Microsoft does not provide us with the possibility of a webhook, yet. So let us be soft on the last point of our list. My first idea was to put it in the installer codeunit. But interestingly this does not work. I suspect Microsoft has not access to the the customer tenant at this point. If somebody knows the real answer shoot me a message on twitter. The second best option for initializing the secret is somewhere in the setup.
 
 ## Are our Requirements sufficient?
 
-No, actually not. We looked at them from our point of view as ISV and partners. But if we take the customers position we recongize that we have to adjust these requirements a littlt bit. Let us assume the customer have to pay per usage for our services. Now the person with access to the keys leaves the company. Maybe he even leaves to a competitor. The customer probably won't like the idea that he still is able to access out services and want to change the keys.
+No, actually not. We looked at them from our point of view as ISV and partners. But if we take the customers position we recognize that we have to adjust these requirements a little bit. Let us assume the customer have to pay per usage for our services. Now the person with access to the keys leaves the company. Maybe he even leaves to a competitor. The customer probably won't like the idea that he still is able to access out services and want to change the keys.
 
 - easy changeable (for ISV and Customer)
 - easy updateable (for ISV and Customer)

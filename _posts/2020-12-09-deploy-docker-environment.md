@@ -244,6 +244,4 @@ Environment are a pretty cool feature of Azure Pipelines, we can set them up qui
 
 *Notes:*
 
-1) In the environment section I told you the matrix strategy needs manual adjustment. After completing this blog entry I discovered that you can [generate a matrix via code](https://docs.microsoft.com/en-us/azure/devops/pipelines/process/phases?view=azure-devops&tabs=yaml#multi-job-configuration).
-
-2) As of the date of publishing the deployed work items are currently not displayed on the deployments.
+In the environment section I told you the matrix strategy needs manual adjustment. After completing this blog entry I discovered that you can [generate a matrix via code](https://docs.microsoft.com/en-us/azure/devops/pipelines/process/phases?view=azure-devops&tabs=yaml#multi-job-configuration).

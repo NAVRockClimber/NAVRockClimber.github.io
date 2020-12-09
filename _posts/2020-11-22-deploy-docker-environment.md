@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Deploy artifacts to BC containers like on-prem"
-date:   2020-11-22
+date:   2020-12-09
 desc: "Deploy artifacts to bc docker containers as if you working on-prem"
 keywords: "Business Central,Docker,Artifacts,Environments"
 categories: [DevOps]

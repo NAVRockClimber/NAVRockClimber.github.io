@@ -48,10 +48,11 @@ Powershell Example:
 $encoded = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("azure:<PAT>"))
 $basicAuthValue = "Basic $encoded"
 $Headers = @{Authorization = $basicAuthValue}
+
 $result = Invoke-WebRequest -Headers $headers -Method Get -Uri "https://vsblob.dev.azure.com/<Your Organization>/_apis/clienttools/ArtifactTool/release?osName=Windows&arch=x86_64"
 ```
 
-Reponse:
+Response:
 
 ``` json
 {
@@ -70,6 +71,7 @@ Example
 
 ``` PowerShell
 $env:AZURE_DEVOPS_EXT_PAT = '<PAT>'
+
 .\artifacttool universal download --service <URL to your devops organization> --patvar AZURE_DEVOPS_EXT_PAT --feed <feed name> --package-name <package name> --package-version '*' --path D:\Temp\Artifact\
 ```
 

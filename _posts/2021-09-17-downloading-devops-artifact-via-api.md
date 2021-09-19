@@ -9,9 +9,13 @@ tags: [Azure Artifacts,DevOps API, Devops Artifacts]
 icon: fa-cube
 ---
 
-In my [previous post]({% post_url 2021-09-10-downloading-devops-artifact %}) I described how we can utilize the internal artifacttool from Microsoft that is used in the Azure CLI and in the pipeline task to download a universal Artifact from a feed hosted in Azure DevOps. It is a good solution if you are sitting on a blank vm or docker container but if you want to download an artifact from an application you are currently writing you would need to open a new process and invoke the tool. I am not a fan of opening new processes and invoking external applications (at least under windows) due to it is in my experience always a point of failure. Meaning if it breaks it breaks there.
+In my [previous post]({% post_url 2021-09-10-downloading-devops-artifact %}) I described how we can utilize the internal artifacttool from Microsoft that is used in the Azure CLI and in the pipeline task to download a universal Artifact from a feed hosted in Azure DevOps. It is a good solution if you are sitting on a blank vm or docker container but if you want to download an artifact from an application you are currently writing you would need to create a new process and invoke the tool. I am not a fan of creating new processes and invoking external applications due to it is in my experience always a point of failure. Meaning if it breaks it breaks there.
 
 So I fired up Fiddler and send a request for downloading an artifact with the artifacttool.
+
+## TL;DR
+
+I created a [http-file](https://github.com/NAVRockClimber/devops_cli_info/blob/master/artifact.http) for the VS Code Rest Client where you just need to fill the variables with your values to download a universal artifact from DevOps.
 
 ## Fiddling around
 
@@ -21,7 +25,7 @@ After downloading an artifact using the artifacttool Fiddler logged request look
 
 <img src="{{ site.img_path }}/artifact_api/Fiddler_Web_Debugger.png" width="40%">
 
-At the end we see a quite big request or better response. Which is a good candidate for being our artifact (I downloaded a Business Central artifact). If we look at the payload of the response we see that we received some binary data with a file header starting "NAVX" which is the typical header for a business central app.
+At the end we see a quite big request or better response. Which is a good candidate for being our artifact (a Business Central app). If we look at the payload of the response we see that we received some binary data with a file header starting "NAVX" which is the typical header for a business central app.
 
 **Request:**
 
@@ -32,31 +36,33 @@ At the end we see a quite big request or better response. Which is a good candid
 <img src="{{ site.img_path }}/artifact_api/Fiddler_Payload.png" width="50%">
 
 Looking closer at these request we see the URL in the request and the headers in the response reveal a that we are looking at a download from an ordinary blob storage.
-So I guessed the request with the cryptic server names like "vsblobprod..." or "pkgsprodsu3weu" are used to retrieve the Blob-Storage URL.
+So I guessed the request with the cryptic server names like "vsblobprod..." or "pkgsprodsu3weu" are used to retrieve the blob-storage URI.
 
-And, I was right looking at the request before I found a JSON response containing the BLOB URI.
+And, I was right looking at the request before I found a json response containing the blob URI.
 
 <img src="{{ site.img_path }}/artifact_api/Fiddler_GetBlobRespsonse.png" width="50%">
 
 ## Analyzing the requests
 
-If you analyze the requests further you find a feq parameters that are collected on the way to get the blob uri. A parameter "virtualDirectory", "ManifestId", "ManifestUri" and a "BlobId". After mostly tracing back where which parameter is retrieved I turned to the URLs. Investigating them further it looks like some aliases for directing you to the next local data center. Probably used by some kind of load balancer and/or geo redundancy service.
+If you analyze the requests further you find a few parameters that are collected on the way to get the blob URL. A parameter "virtualDirectory", "ManifestId", "ManifestUri" and a "BlobId". After mostly tracing back where which parameter is retrieved I turned to the URLs. Investigating them further it looks like some aliases for directing you to the next local data center. Probably Microsoft used some kind of load balancer and/or geo redundancy service.
 Cross checking them with the IPs from the servers in this [list from Microsoft's Documentation](https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/v2-windows?view=azure-devops#for-organizations-using-the-devazurecom-domain) we can substitute them with prettier names.
 
 So I started putting everything together in VS Code [Rest client file](https://github.com/NAVRockClimber/devops_cli_info/blob/master/artifact.http).
 
 ### 1. Virtual Directory
 
-One of the first parameter you will need is a virtualDirectory which seems just to be a guid. At least in my investigation I found nothing we can substitute this id with.
+One of the first parameter you will need is the virtualDirectory which seems to be just a guid. At least in my investigation I found nothing we can substitute this id with.
 
 **Request Structure:**
 
 ```
+{% raw %}
 @Organization=<Your DevOps Organisation>
 @PAT=<Your PAT>
 
 GET https://dev.azure.com/{{Organization}}/_apis/connectionData?connectOptions=1
 Authorization: Basic PAT:{{PAT}}
+{% endraw %}
 ```
 
 You retrieve a complex JSON where you need to find the property virtualDirectory in locationServiceData.accessMappings and copy the value.
@@ -68,12 +74,14 @@ In the next step we need the retrieve the ID of the manifest belonging to our pa
 **Request Structure:**
 
 ```
+{% raw %}
 @feed=<Your Devops Feed Name>
 @package=<Your Package Name>
 @version=<Desired Version>
 
 GET https://pkgs.dev.azure.com/{{Organization}}/_packaging/{{feed}}/upack/packages/{{package}}/versions/{{version}}?intend=download
 Authorization: Basic PAT:{{PAT}}
+{% endraw %}
 ```
 
 **Response:**
@@ -96,6 +104,7 @@ This slightly more difficult request will return the URL of our manifest.
 **Request Structure:**
 
 ```
+{% raw %}
 @VirtualDirectory=<virtualDirectory from 1.>
 @ManifestId=<manifestID from 2.>
 
@@ -105,6 +114,7 @@ Accept: application/json; api-version=1.0
 Authorization: Basic PAT:{{PAT}}
 
 ["{{ManifestId}}"]
+{% endraw %}
 ```
 
 **Response:**
@@ -118,9 +128,11 @@ Authorization: Basic PAT:{{PAT}}
 With this link we can download the manifest with a simple http get. It is probably noteworthy that this link is only valid for 24 hours.
 
 ```
+{% raw %}
 @ManifestUri=
 
 GET {{ManifestUri}}
+{% endraw %}
 ```
 
 **Response:**
@@ -147,6 +159,8 @@ We are nearly there. With the blob id from the manifest before we can query the 
 
 **Request Structure:**
 
+```
+{% raw %}
 @BlobId=
 
 POST https://{{Organization}}.vsblob.visualstudio.com/{{VirtualDirectory}}/_apis/dedup/urls?allowEdge=true"
@@ -155,6 +169,8 @@ Accept: application/json; api-version=1.0
 Authorization: Basic PAT:{{PAT}}
 
 ["{{BlobId}}"]
+{% endraw %}
+```
 
 **Resonse:**
 
@@ -168,4 +184,6 @@ With the URL in the response we can now finally simply download the artifact we 
 
 ## Conclusion
 
-Downloading an artifact via this undocumented or internal API is somewhat cumbersome but in some cases you prefer an api over a tool. If you choose the Azure cli, the artifacttool or the API is your decision. In the most cases I will probably use the azure cli and just now and than depending on the circumstances the artifacttool or the API. 
+Downloading an artifact via this undocumented or internal API looks first a bit cumbersome but taking a closer look there is a process that makes sense. Microsoft seems to organize the artifacts or organizations in virtual directories so you need the folder where to look for the manifest which contains information about the file(s) that have been stored and from that we can download our artifact(s). I never tried downloading multiple files but I guess it works in a similar way.
+
+Which way you are going to use to download an artifact depends on your situation. If it is the Azure cli, the artifacttool or the API is your decision. In the most cases I will probably use the azure cli and just now and depending on the circumstances the artifacttool or the API.
